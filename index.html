@@ -35,15 +35,11 @@
   a:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
   ::selection{background:var(--accent);color:var(--bg)}
 
-  /* CRT atmosphere — scanlines + vignette, the only real "effect" */
+  /* CRT atmosphere — scanlines, the only real "effect". Background stays a flat fill. */
   body::after{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);
     opacity:.5;mix-blend-mode:multiply;
-  }
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:49;
-    background:radial-gradient(125% 125% at 50% -10%,transparent 52%,rgba(0,0,0,.6) 100%);
   }
 
   /* command line */
@@ -112,9 +108,6 @@
     color:var(--dim);font-size:.8rem}
   footer .red{color:var(--redact)}
   footer .links{margin:1rem 0;display:flex;flex-wrap:wrap;gap:1.4rem}
-  footer .brag{margin-top:1.15rem;line-height:1.8}
-  footer .brag .kb{color:var(--ok)}
-  footer .brag .am{color:var(--accent)}
 
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
@@ -217,8 +210,6 @@
       <a href="https://github.com/DaKerboul">github</a>
       <a href="https://www.youtube.com/@DaKerboul">youtube</a>
     </p>
-    <p class="brag">Served as <span class="am">one static file</span> · <span class="am">0 dependencies</span> · <span class="am">0 JavaScript</span> · <span class="am">0 external requests</span>.<br>
-    The whole terminal weighs <span class="kb">≈ 12 kb</span> — it finished loading before you got here. ● 512kb.club, green tier and then some.</p>
   </footer>
 
 </main>
