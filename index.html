@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENTINEL // mission control</title>
+<meta name="description" content="Public status terminal for a self-hosted homelab cluster. Everything operational is [REDACTED] by design.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0b0a">
+<meta property="og:title" content="SENTINEL // mission control">
+<meta property="og:description" content="Public status terminal for a self-hosted cluster. Addresses, ports, versions and topology are [REDACTED] by design.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0b0a'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23eba23c' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%234af08a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0a0b0a; --panel:#0e100d; --fg:#d6d3c8; --dim:#847e70;
+    --accent:#eba23c;          /* phosphor amber — the chrome */
+    --accent-dim:#7a5d28;
+    --ok:#4af08a;              /* green — reserved for LIVE status only */
+    --redact:#e8643c;          /* the [CLASSIFIED] pop */
+    --line:#1a1814; --line-bright:#2a2822;
+    --mono: ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:var(--mono); font-size:15px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; letter-spacing:.02em;
+    padding:clamp(1.1rem,4vw,3rem);
+  }
+  .wrap{max-width:760px;margin:0 auto;position:relative;z-index:1}
+  a{color:var(--accent);text-decoration:none}
+  a:hover,a:focus-visible{text-decoration:underline;text-underline-offset:.2em}
+  a:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+  ::selection{background:var(--accent);color:var(--bg)}
+
+  /* CRT atmosphere — scanlines + vignette, the only real "effect" */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);
+    opacity:.5;mix-blend-mode:multiply;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:49;
+    background:radial-gradient(125% 125% at 50% -10%,transparent 52%,rgba(0,0,0,.6) 100%);
+  }
+
+  /* command line */
+  .cli{font-size:.92rem}
+  .cli .host{color:var(--accent)}
+  .cli .sep,.cli .path{color:var(--dim)}
+  .cli .cmd{color:var(--fg)}
+  .cursor{display:inline-block;width:.55ch;height:1.05em;background:var(--accent);
+    vertical-align:-.16em;margin-left:.25ch;animation:blink 1.05s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .boot{color:var(--dim);font-size:.82rem;margin:1.1rem 0 0;white-space:pre-wrap}
+  .boot .ok{color:var(--ok)}
+
+  h1{font-size:clamp(2.6rem,13vw,5.2rem);line-height:.92;margin:1.5rem 0 .35rem;
+    letter-spacing:.04em;font-weight:700;color:var(--fg)}
+  .lede{color:var(--dim);margin:.35rem 0 1.6rem;max-width:56ch}
+  .lede .red{color:var(--redact)}
+
+  .badge{display:inline-flex;align-items:center;gap:.65ch;border:1px solid var(--line-bright);
+    padding:.4rem .85rem;font-size:.78rem;letter-spacing:.1em;color:var(--fg)}
+
+  .dot{width:.55em;height:.55em;border-radius:50%;background:var(--ok);color:var(--ok);
+    display:inline-block;box-shadow:0 0 .45em currentColor;animation:pulse 2.4s ease-out infinite}
+  .dot.idle{background:var(--dim);color:var(--dim);box-shadow:none;animation:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 .55em transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+  h2{display:flex;align-items:center;gap:1ch;font-size:.82rem;font-weight:400;
+    color:var(--accent);letter-spacing:.2em;margin:3.2rem 0 1.3rem;text-transform:uppercase}
+  h2::after{content:"";flex:1;border-top:1px solid var(--line-bright)}
+
+  /* FLEET — self-:target expandable cards, no JS */
+  .fleet{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line)}
+  .node{background:var(--panel);padding:1.15rem 1.25rem;scroll-margin-top:1.5rem}
+  .node:target{background:#120f0a;box-shadow:inset 3px 0 0 var(--accent)}
+  .node h3{margin:0;font-size:1.18rem;font-weight:700;display:flex;align-items:center;gap:.65ch}
+  .node h3 a{color:var(--fg);flex:1}
+  .node h3 a::before{content:"▸ ";color:var(--accent-dim)}
+  .node:target h3 a::before{content:"▾ ";color:var(--accent)}
+  .node .cls{color:var(--dim);font-size:.76rem;letter-spacing:.16em;margin:.35rem 0 0}
+  .node .detail{display:none;margin-top:.95rem;padding-top:.95rem;border-top:1px dashed var(--line-bright)}
+  .node:target .detail{display:block}
+  .node .role{margin:0 0 .75rem;font-size:.9rem;color:var(--fg)}
+  .redacted{font-size:.74rem;color:var(--dim);border:1px dashed var(--line-bright);
+    padding:.55rem .7rem;letter-spacing:.05em;line-height:1.7}
+  .redacted .cls-flag{color:var(--redact)}
+  .deselect{display:inline-block;margin-top:.75rem;font-size:.74rem;color:var(--dim)}
+
+  /* TELEMETRY — monospace block-bars, perfectly aligned in <pre> */
+  pre.tele{background:var(--panel);border:1px solid var(--line-bright);
+    padding:1.25rem;margin:0;overflow-x:auto;font-size:.85rem;line-height:1.95;color:var(--fg)}
+  pre.tele .lbl{color:var(--dim)}
+  pre.tele .bar{color:var(--ok)}
+  pre.tele .empty{color:var(--line-bright)}
+  .note{color:var(--dim);font-size:.74rem;margin:.85rem 0 0}
+
+  /* STACK */
+  .stack{display:flex;flex-wrap:wrap;gap:.6rem;list-style:none;padding:0;margin:0}
+  .stack li{border:1px solid var(--line-bright);padding:.42rem .8rem;font-size:.78rem;
+    color:var(--fg);letter-spacing:.06em}
+  .stack li::before{content:"› ";color:var(--accent-dim)}
+
+  /* FOOTER */
+  footer{margin-top:3.6rem;padding-top:1.5rem;border-top:1px solid var(--line-bright);
+    color:var(--dim);font-size:.8rem}
+  footer .red{color:var(--redact)}
+  footer .links{margin:1rem 0;display:flex;flex-wrap:wrap;gap:1.4rem}
+  footer .brag{margin-top:1.15rem;line-height:1.8}
+  footer .brag .kb{color:var(--ok)}
+  footer .brag .am{color:var(--accent)}
+
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .cursor,.dot{animation:none!important}
+    body::after{opacity:.32}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <!-- ─────────────────────────── HEADER ─────────────────────────── -->
+  <p class="cli"><span class="host">sentinel</span><span class="sep">@</span><span class="host">kerboul.me</span><span class="sep">:</span><span class="path">~</span><span class="sep">$</span> <span class="cmd">status --public</span><span class="cursor" aria-hidden="true"></span></p>
+
+  <p class="boot"><span class="ok">[ OK ]</span> mounting public interface
+<span class="ok">[ OK ]</span> redacting operational data
+<span class="ok">[ OK ]</span> reticulating splines
+<span class="ok">[ OK ]</span> terminal ready</p>
+
+  <h1>SENTINEL</h1>
+  <p class="lede">A self-hosted cluster humming in a closet somewhere in France. This is its public face — the parts worth showing. Addresses, ports, versions and topology are <span class="red">[REDACTED]</span> by design.</p>
+
+  <p class="badge"><span class="dot" aria-hidden="true"></span> ALL SYSTEMS NOMINAL</p>
+
+  <!-- ─────────────────────────── FLEET ──────────────────────────── -->
+  <!-- Codenames + roles below are deliberately fictional. RULE: roles stay
+       GENERIC. Never put real specs / IPs / services / hostnames here. -->
+  <h2 id="fleet">// fleet</h2>
+  <div class="fleet">
+
+    <article class="node" id="ultron">
+      <h3><a href="#ultron">ULTRON</a> <span class="dot" aria-hidden="true"></span></h3>
+      <p class="cls">CLASS · COMPUTE</p>
+      <div class="detail">
+        <p class="role">Carries the heavy workloads. The muscle of the fleet.</p>
+        <div class="redacted">SPECS · ADDRESS · WORKLOADS — <span class="cls-flag">[CLASSIFIED]</span></div>
+        <a class="deselect" href="#fleet">↩ deselect</a>
+      </div>
+    </article>
+
+    <article class="node" id="cynosure">
+      <h3><a href="#cynosure">CYNOSURE</a> <span class="dot" aria-hidden="true"></span></h3>
+      <p class="cls">CLASS · CONTROL PLANE</p>
+      <div class="detail">
+        <p class="role">Keeps the constellation in formation. Orchestration brain.</p>
+        <div class="redacted">SPECS · ADDRESS · STATE — <span class="cls-flag">[CLASSIFIED]</span></div>
+        <a class="deselect" href="#fleet">↩ deselect</a>
+      </div>
+    </article>
+
+    <article class="node" id="horizon">
+      <h3><a href="#horizon">HORIZON</a> <span class="dot" aria-hidden="true"></span></h3>
+      <p class="cls">CLASS · STORAGE</p>
+      <div class="detail">
+        <p class="role">Where the bits come to rest. Distributed, redundant, patient.</p>
+        <div class="redacted">SPECS · ADDRESS · CAPACITY — <span class="cls-flag">[CLASSIFIED]</span></div>
+        <a class="deselect" href="#fleet">↩ deselect</a>
+      </div>
+    </article>
+
+    <article class="node" id="pulsar">
+      <h3><a href="#pulsar">PULSAR</a> <span class="dot idle" aria-hidden="true"></span></h3>
+      <p class="cls">CLASS · EDGE</p>
+      <div class="detail">
+        <p class="role">The gate. Everything that reaches the outside passes through here.</p>
+        <div class="redacted">SPECS · ADDRESS · ROUTES — <span class="cls-flag">[CLASSIFIED]</span></div>
+        <a class="deselect" href="#fleet">↩ deselect</a>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- ───────────────────────── TELEMETRY ────────────────────────── -->
+  <!-- Vibe figures only. Rounded, tilde'd, never precise. -->
+  <h2>// telemetry</h2>
+  <pre class="tele" aria-label="Approximate cluster telemetry"><span class="lbl">NODES ONLINE   </span>[<span class="bar">███████████████░</span>] 3 / 4
+<span class="lbl">POOLED CORES   </span>[<span class="bar">█████████████</span><span class="empty">░░░</span>] ~48
+<span class="lbl">POOLED MEMORY  </span>[<span class="bar">██████████████</span><span class="empty">░░</span>] ~128 GB
+<span class="lbl">SERVICES LIVE  </span>[<span class="bar">███████████</span><span class="empty">░░░░░</span>] ~30
+<span class="lbl">UPTIME         </span>[<span class="bar">████████████████</span>] nominal</pre>
+  <p class="note">// figures approximate · rounded for the public terminal · not operational data</p>
+
+  <!-- ─────────────────────────── STACK ──────────────────────────── -->
+  <h2>// stack</h2>
+  <ul class="stack">
+    <li>PROXMOX VE</li>
+    <li>KUBERNETES</li>
+    <li>CEPH</li>
+    <li>LINUX</li>
+    <li>GITOPS CI/CD</li>
+    <li>REVERSE PROXY</li>
+  </ul>
+  <p class="note">// names only · no versions, no configs, no surface area</p>
+
+  <!-- ─────────────────────────── FOOTER ─────────────────────────── -->
+  <footer>
+    <p><span class="red">PUBLIC READ-ONLY TERMINAL.</span> Addresses, ports, versions &amp; topology are redacted by design. Nothing here is actionable. There is no console. There is no shell. There is only this page.</p>
+    <p class="links">
+      <a href="https://kerboul.me">kerboul.me</a>
+      <a href="https://github.com/DaKerboul">github</a>
+      <a href="https://www.youtube.com/@DaKerboul">youtube</a>
+    </p>
+    <p class="brag">Served as <span class="am">one static file</span> · <span class="am">0 dependencies</span> · <span class="am">0 JavaScript</span> · <span class="am">0 external requests</span>.<br>
+    The whole terminal weighs <span class="kb">≈ 12 kb</span> — it finished loading before you got here. ● 512kb.club, green tier and then some.</p>
+  </footer>
+
+</main>
+</body>
+</html>

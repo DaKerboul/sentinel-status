@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGNAL LOST // 404</title>
+<meta name="description" content="404 — the requested resource is off the grid.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0b0a">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0b0a'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%23eba23c' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23e8643c'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0a0b0a; --fg:#d6d3c8; --dim:#847e70;
+    --accent:#eba23c; --redact:#e8643c;
+    --line-bright:#2a2822;
+    --mono: ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--fg);font-family:var(--mono);line-height:1.6;
+    letter-spacing:.02em;padding:clamp(1.1rem,4vw,3rem);-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:620px;position:relative;z-index:1}
+  a{color:var(--accent);text-decoration:none}
+  a:hover,a:focus-visible{text-decoration:underline;text-underline-offset:.2em}
+  a:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+  ::selection{background:var(--accent);color:var(--bg)}
+
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);
+    opacity:.5;mix-blend-mode:multiply;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:49;
+    background:radial-gradient(125% 125% at 50% -10%,transparent 52%,rgba(0,0,0,.6) 100%);
+  }
+
+  .cli{font-size:.92rem;color:var(--dim)}
+  .cli .host{color:var(--accent)}
+  h1{font-size:clamp(2.6rem,13vw,5rem);line-height:.92;margin:1.2rem 0 .35rem;
+    letter-spacing:.04em;font-weight:700}
+  h1 .err{color:var(--redact)}
+  .sub{color:var(--dim);font-size:.82rem;letter-spacing:.2em;text-transform:uppercase;margin:0 0 1.5rem}
+  p.msg{color:var(--dim);max-width:48ch}
+  p.msg .red{color:var(--redact)}
+  .back{display:inline-block;margin-top:1.4rem;border:1px solid var(--line-bright);
+    padding:.45rem .9rem;font-size:.82rem;letter-spacing:.06em}
+  .back::before{content:"↩ ";color:var(--accent)}
+
+  @media (prefers-reduced-motion:reduce){ body::after{opacity:.32} }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="cli"><span class="host">sentinel</span>@<span class="host">kerboul.me</span>:~$ locate <span style="color:var(--fg)">resource</span></p>
+  <h1>SIGNAL <span class="err">LOST</span></h1>
+  <p class="sub">// error 404 · no such route</p>
+  <p class="msg">The coordinates you requested aren't on the grid — moved, redacted, or never existed. Either way, there's nothing to see here. <span class="red">[NO SIGNAL]</span></p>
+  <a class="back" href="/">return to terminal</a>
+</main>
+</body>
+</html>
